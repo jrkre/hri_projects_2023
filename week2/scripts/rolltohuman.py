@@ -196,7 +196,7 @@ def driver():
 
 
         elif(not distanceToPerson and obstacle != 0 and obstacleDistance < .5):
-        turnRadians(90)
+            turnRadians(90)
             driveForward(.5)
         else:
             angle_to_turn = findAngleToPerson()
