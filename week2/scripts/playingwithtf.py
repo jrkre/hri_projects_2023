@@ -18,7 +18,9 @@ def callback(msg):
     transformStamped.header.stamp = rospy.Time.now()
     transformStamped.header.frame_id = "odom"
     transformStamped.child_frame_id = "human"
-
+    
+    if (len(msg.people) == 0):
+        return
     
     person_x = msg.people[0].pos.x
     person_y = msg.people[0].pos.y
