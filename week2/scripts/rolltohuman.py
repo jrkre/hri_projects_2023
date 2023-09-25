@@ -207,6 +207,7 @@ def driver():
     return
 
 
+#adding a tag (hopefully)
 if __name__ == '__main__':
     try:
         rospy.init_node('obstacle_stoppies', anonymous=True)
