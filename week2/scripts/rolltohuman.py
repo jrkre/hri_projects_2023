@@ -73,6 +73,7 @@ def findObjPos(data):
     elif closest < .5: #this should be right in front of it
         obstacle = 1
     obstacleDistance = closest
+    #print("closest: ", closest)
     rospy.sleep(.1)
 
 
@@ -110,16 +111,13 @@ def turnToAngle(radians):
     else:
         direction = gamma
     
-    # if(target_radians - yaw > yaw + target_radians):
-    #     direction = .2
-    # else:
-    #     direction = -.2
-    
     while (abs(target_radians - yaw) > .1):
         msg.linear.x = 0
         msg.angular.z = direction
         pub.publish(msg)
         rospy.sleep(.1)
+    print("done turning")
+    return
     
             
 def degreesToRadians(degrees):
@@ -143,17 +141,21 @@ def turnRadians(degrees): #(definitely radians)
         msg.angular.z = direction
         pub.publish(msg)
         rospy.sleep(.1)
+    
+
 
 def driveForward(meters):
     global OdometryData
     
     msg = Twist()
+    meters = float(meters)
     
-    for i in range(0, meters*10):
+    for i in range(0, int(meters*10)):
         msg.linear.x = 1
         msg.angular.z = 0
         pub.publish(msg)
         rospy.sleep(.1)
+    return
 
 
 def findAngleToPerson():
@@ -178,68 +180,42 @@ def findDistanceToPerson():
     
     return distance
 
-#find closest object angle
-# def findObjPos(data):
-#     global turn
-#     closest = 100
-#     closestAngle = -1
-#     print("data.ranges.length: ", len(data.ranges))
-#     for i in range(0, len(data.ranges)):
-#         if data.ranges[i] < closest:
-            
-#             closest = data.ranges[i]
-#             closestAngle = i
-#     #print("Object detected at angle: ", closestAngle)
-#     #print("Object detected at distance: ", closest)
-#     if closestAngle < 100: # 340- is on the left side of the robot -> do nothing
-#         turn = 0
-#     elif closestAngle > 980: # 740+ is on the right side of the robot -> do nothing
-#         turn = 0
-#     elif closest < .5: #this should be right in front of it
-#         turn = 1
-#     print(turn)
-
 
 def driver():
     msg = Twist()
     
-    
-    if (findDistanceToPerson() < .5):
-        msg.linear.x = 0
-        msg.angular.z = 0
-        pub.publish(msg)
-        rospy.sleep(.1)
-        print("I'm here!")
-        return
-    
-    
-    if(obstacle != 0 and obstacleDistance < .5):
-        turnRadians(90)
-        driveForward(.5)
-    else:
-        angle_to_turn = findAngleToPerson()
-        turnToAngle(angle_to_turn)
-        driveForward(1)
-    
-    print("here")
-    
-    
+    while not rospy.is_shutdown():
+        distanceToPerson = findDistanceToPerson() < 1
+        if (distanceToPerson):
+            msg.linear.x = 0
+            msg.angular.z = 0
+            pub.publish(msg)
+            rospy.sleep(.1)
+            print("I made it to the human!")
+            return
 
+
+        elif(not distanceToPerson and obstacle != 0 and obstacleDistance < .5):
+        turnRadians(90)
+            driveForward(.5)
+        else:
+            angle_to_turn = findAngleToPerson()
+            turnToAngle(angle_to_turn)
+            driveForward(.1)
+
+        print("here")
+    return
 
 
 if __name__ == '__main__':
     try:
         rospy.init_node('obstacle_stoppies', anonymous=True)
         rate = rospy.Rate(1) # 10hz
+        print("top main")
         
-        # while(OdometryData == None):
-        #     rospy.Subscriber('/odom', Odometry, updatePosition)
-        #     rospy.sleep(.1)
-        
-        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        #rospy.Subscriber('/base_scan', LaserScan, findObjPos)
+        pub = rospy.Publisher('/cmd_vel', Twist, queue_size=5)
         rospy.Subscriber('/odom', Odometry, updatePosition)
-        subscriber = rospy.Subscriber('/people_tracker_measurements', PositionMeasurementArray, callback)
+        rospy.Subscriber('/people_tracker_measurements', PositionMeasurementArray, callback)
         rospy.Subscriber('/base_scan', LaserScan, findObjPos)
         
         while(OdometryData == None):
@@ -258,6 +234,8 @@ if __name__ == '__main__':
         print("HERE")
         
         driver()
+        
+        print("bottom main")
         
         rospy.spin()
         
