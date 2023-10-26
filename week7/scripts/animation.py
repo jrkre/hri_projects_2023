@@ -34,7 +34,9 @@ def driver():
         
     interpolate_list()
     
-    
+    for joint_state in full_animation:
+        pub.publish(joint_state)
+        rospy.sleep(0.1)
     #linear interpolation on lists
 
 def add(a, b):
