@@ -5,13 +5,16 @@ import rospy
 from sensor_msgs.msg import JointState
 import tf
 
-
+STEPS_PER_KEYFRAME = 100
+PUBLISH_RATE = 100
 
 current_state = JointState()
 keyframe_jointstates = []
 full_animation = []
 
 
+#grab joint names
+names = None
 
 #shoulder pitch,roll, elbow yaw, roll, wrist yaw, hand
 arm_initial_states = [1.5, 0, 1.35, 0.8, 0, 0, 1.5, 0, 1.35, 0.8, 0, 0]
@@ -19,25 +22,35 @@ pub = None
 
 
 def driver():
+    exit_entering = False
     while rospy.is_shutdown() == False:
-        user_input = input("enter 1 to set a joint state or press 0 to finish entering states:")
+        user_input = input("enter one of the following:\n    1 to set a joint state\n    0 to finish entering states\n    2 to run animation\n:")
         if (user_input == "0"):
             rospy.loginfo("states entered:")
             rospy.loginfo(len(keyframe_jointstates))
+            exit_entering = True
             rospy.loginfo("finished entering states. generating animation...")
-            break
+            #linear interpolation between each pair of keyframes
+            interpolate_list()
+            
         elif (user_input == "1"):
             rospy.loginfo("saved current state as a keyframe")
+            #add joint state to list of keyframes
             append_joint_state()
+            
+        elif (user_input == "2" and exit_entering):
+            rospy.loginfo("running animation...")
+            #break loop and publish animation
+            break
         else:
             rospy.loginfo("invalid input")
         
-    interpolate_list()
-    
     for joint_state in full_animation:
+        joint_state.header.stamp = rospy.Time.now()
         pub.publish(joint_state)
-        rospy.sleep(0.1)
-    #linear interpolation on lists
+        rospy.loginfo("published joint state")
+        rospy.sleep(0.01)
+    
 
 def add(a, b):
     return a + b
@@ -46,26 +59,35 @@ def add(a, b):
 def interpolate_list():
     global current_state, full_animation, keyframe_jointstates
     rospy.loginfo("interpolating between keyframes")
-    slopes_matrix = [None] * (len(keyframe_jointstates) - 1) 
+    slopes_matrix = [None] * (len(keyframe_jointstates) - 1)
+    #rospy.loginfo("slopes matrix:")
+    #rospy.loginfo(slopes_matrix)
     cnt = 1
     while (cnt < len(keyframe_jointstates)): #form the set of slopes between each pair of keyframes
-        rospy.loginfo("interpolating between keyframes cnt:" + str(cnt) + " and keyframeJS:" + str(len(keyframe_jointstates)) + " and slope:" + str(len(slopes_matrix)))
+        #rospy.loginfo("interpolating between keyframes cnt:" + str(cnt) + " and keyframeJS:" + str(len(keyframe_jointstates)) + " and slope:" + str(len(slopes_matrix)))
         
         slopes_matrix[cnt-1] = interpolate(keyframe_jointstates[cnt - 1], keyframe_jointstates[cnt])
         cnt += 1
     #generate the interpolations
-    rospy.loginfo(slopes_matrix)
-    cnt = 0
-    for keyframe in slopes_matrix:
-        keyframe = list(keyframe)
-        for i in range(0,20):
+    #rospy.loginfo(slopes_matrix)
+    full_animation.append(keyframe_jointstates[0])
+    cnt = 1
+    for keyframe_diff in slopes_matrix:
+        keyframe_diff = list(keyframe_diff)
+        #rospy.loginfo("keyframe_diff:")
+        #rospy.loginfo(keyframe_diff)
+        for i in range(0, STEPS_PER_KEYFRAME):
             joint_state = JointState()
-            joint_state.header.stamp = rospy.Time.now()
-            joint_state.header.frame_id = "base_link"
-            joint_state.name = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
-            joint_state.position  = list(map(add, keyframe_jointstates[cnt].position, keyframe))
+            #joint_state.header.stamp = rospy.Time.now()
+            joint_state.header.frame_id = ""
+            joint_state.name = names
+            joint_state.position  = list(map(add, full_animation[cnt-1].position, keyframe_diff))
+            #rospy.loginfo("joint_state.position:")
+            #rospy.loginfo(joint_state.position[0])
+            joint_state.velocity = []
+            joint_state.effort = []
             full_animation.append(joint_state)
-        cnt += 1
+            cnt += 1
     rospy.loginfo("animation generated")
     #rospy.loginfo(full_animation)
     
@@ -80,10 +102,10 @@ def interpolate(js1, js2):
         if (js1.position[cnt] == js2.position[cnt]):
             slopes.append(0)
         else:
-            slopes.append((js2.position[cnt] - js1.position[cnt]) / 20) #distance between keyframes over 20 'units'
+            slopes.append((js2.position[cnt] - js1.position[cnt]) / STEPS_PER_KEYFRAME) #distance between keyframes over 20 'units'
         cnt += 1
-    rospy.loginfo("slopes:")
-    rospy.loginfo(slopes)
+    #rospy.loginfo("slopes:")
+    #rospy.loginfo(slopes)
     return slopes
         
 
@@ -96,7 +118,7 @@ def init():
     global arm_initial_states, pub
     init_joint_state = JointState()
     init_joint_state.header.stamp = rospy.Time.now()
-    init_joint_state.header.frame_id = "base_link"
+    init_joint_state.header.frame_id = ""
     #init_joint_state.name = ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw", "RHand", "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw", "LHand"]
     init_joint_state.name = ["HeadYaw","HeadPitch","LHipYawPitch","LHipRoll","LHipPitch","LKneePitch","LAnklePitch","LAnkleRoll","RHipYawPitch",
                              "RHipRoll","RHipPitch","RKneePitch","RAnklePitch","RAnkleRoll","LShoulderPitch","LShoulderRoll","LElbowYaw","LElbowRoll","LWristYaw","LHand","RShoulderPitch","RShoulderRoll","RElbowYaw","RElbowRoll","RWristYaw","RHand","RFinger23","RFinger13","RFinger12","LFinger21","LFinger13","LFinger11","RFinger22","LFinger22","RFinger21","LFinger12","RFinger11","LFinger23","LThumb1","RThumb1","RThumb2","LThumb2"]
@@ -114,7 +136,9 @@ def init():
     pub.publish(init_joint_state)
 
 def joint_state_callback(msg):
-    global current_state
+    global current_state, names
+    names = msg.name
+    #print(msg.name)
     current_state = msg
 
 if __name__ == "__main__":
@@ -124,3 +148,4 @@ if __name__ == "__main__":
     sub = rospy.Subscriber("/joint_states", JointState, joint_state_callback)
     init()
     driver()
+    rospy.Rate(PUBLISH_RATE)
