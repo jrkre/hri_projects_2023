@@ -74,9 +74,10 @@ def classify_line(person_array):
         line = True
         
     return line
-        
-    
 
+
+def classify_circle(person_array):
+    
 
 if __name__ == '__main__':
 

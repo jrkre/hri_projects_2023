@@ -24,7 +24,7 @@ pub = None
 def driver():
     exit_entering = False
     while rospy.is_shutdown() == False:
-        user_input = input("enter one of the following:\n    1 to set a joint state\n    0 to finish entering states\n    2 to run animation\n:")
+        user_input = input("enter one of the following:\n   0 to finish entering states\n    1 to set a joint state\n    2 to run animation\n    3 to view/edit joint states\n$")
         if (user_input == "0"):
             rospy.loginfo("states entered:")
             rospy.loginfo(len(keyframe_jointstates))
@@ -41,15 +41,43 @@ def driver():
         elif (user_input == "2" and exit_entering):
             rospy.loginfo("running animation...")
             #break loop and publish animation
-            break
+            for joint_state in full_animation:
+                joint_state.header.stamp = rospy.Time.now()
+                pub.publish(joint_state)
+                rospy.loginfo("published joint state")
+                rospy.sleep(0.01)
+        elif (user_input == "3"):
+            rospy.loginfo("joint states:")
+            rospy.loginfo(len(keyframe_jointstates))
+            editing_joint_state = True
+            while(editing_joint_state):
+                joint_state_select = input("enter a joint state number to view/edit it\n$")
+                if (joint_state_select.isdigit() and int(joint_state_select) < len(keyframe_jointstates)):
+                    rospy.loginfo("publishing joint state...")
+                    pub.publish(keyframe_jointstates[int(joint_state_select)])
+                    joint_state_edit = input("enter 1 to edit joint state and 0 to exit\n$")
+                    if (joint_state_edit.isdigit() and int(joint_state_edit) == 1):
+                        rospy.loginfo("editing joint state...")
+                        joint_state = keyframe_jointstates[int(joint_state_select)]
+                        keyframe_jointstates[int(joint_state_select)] = joint_state
+                        joint_state_enter = input("enter 1 to enter joint state and 0 to exit\n$")
+                        if (joint_state_enter.isdigit() and int(joint_state_enter) == 1):
+                            joint_state = current_state
+                            keyframe_jointstates[int(joint_state_select)] = joint_state
+                            rospy.loginfo("joint state updated")
+                        elif (joint_state_enter.isdigit() and int(joint_state_enter) == 0):
+                            editing_joint_state = False
+                            rospy.loginfo("exiting...")
+                    elif(joint_state_edit.isdigit() and int(joint_state_edit) == 0):
+                        editing_joint_state = False
+                        rospy.loginfo("exiting...")
+                    else:
+                        rospy.loginfo("invalid input")
+                
         else:
             rospy.loginfo("invalid input")
-        
-    for joint_state in full_animation:
-        joint_state.header.stamp = rospy.Time.now()
-        pub.publish(joint_state)
-        rospy.loginfo("published joint state")
-        rospy.sleep(0.01)
+    
+    
     
 
 def add(a, b):
