@@ -3,6 +3,7 @@
 import rospy
 
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool
 import tf
 
 STEPS_PER_KEYFRAME = 100
@@ -32,12 +33,35 @@ def animate_to(msg):
                 #rospy.loginfo("published joint state")
                 rospy.sleep(0.01)
     
+def animate(msg):
+    global keyframe_jointstates
+    
+    keyframe_jointstates.append(current_state)
+    new_js = JointState([0.0, -9.093359999989836e-05, -0.00010594240000005861, -0.0001550409999999669, -0.00038482599999989375, -0.00016400378000000493, -0.6278536161, 0.23566920370000005, -0.00010594240000005861, -0.0001959274999999705, -0.00038482599999989375, -0.00016400378000000493, -4.8639999999711137e-05, -0.0001017730000000272, -0.15600811599999997, -0.00014643740000003236, 0.0, -0.7897633000000001, 0.0, 0.0, 0.5372685920000002, -1.0856085988, 2.08567, 0.60361563778, 0.33851027199999995, 0.7452, 0.7451247348, 0.7451247348, 0.7451247348, 0.0, 0.0, 0.0, 0.7451247348, 0.0, 0.7451247348, 0.0, 0.7451247348, 0.0, 0.0, 0.7451247348, 0.7451247348, 0.0])
+    new_js_2 = [-1.2634988859999998, -0.5014053912, -0.4105012831999999, 0.06231735199999999, -1.148276947, 0.07524282040000001, 0.35951620139999996, 0.5524426432, -0.4105012831999999, -0.18995289650000002, -1.262803576, 1.21759006039, -0.5285659869999999, -0.5334245693, -1.196757446, 0.9441881029999999, 0.7600181479999999, -1.1185788785200002, -0.061646806000000165, 0.9444, -0.683682626, -0.4570912908999999, -1.768231026, 0.4956711296800001, 0.19187112399999973, 0.2071, 0.2070790829, 0.2070790829, 0.2070790829, 0.9443046156, 0.9443046156, 0.9443046156, 0.2070790829, 0.9443046156, 0.2070790829, 0.9443046156, 0.2070790829, 0.9443046156, 0.9443046156, 0.2070790829, 0.2070790829, 0.9443046156]
+    new_new_js = [0.16101372400000002, 0.48674427119999997, -1.1356713591999998, -0.3634074385, -1.363191115, 0.75588862813, -0.26648682300000004, 0.0879582739, -1.1356713591999998, -0.504771641, -1.450853473, 1.7774085592000002, 0.00228149660000021, -0.3309929238, 1.9371702960000001, -0.25509707600000003, 0.9756764260000002, -1.18666695286, 1.6644637620000002, 0.2763, 1.1024851619999998, 0.15305119620000007, -0.617775454, 0.5500208120800001, -0.1674312659999999, 0.6497, 0.6496343803000001, 0.6496343803000001, 0.6496343803000001, 0.2762720937, 0.2762720937, 0.2762720937, 0.6496343803000001, 0.2762720937, 0.6496343803000001, 0.2762720937, 0.6496343803000001, 0.2762720937, 0.2762720937, 0.6496343803000001, 0.6496343803000001, 0.2762720937]
+    
+    keyframe_jointstates.append(new_js)
+    keyframe_jointstates.append(new_js_2)
+    keyframe_jointstates.append(new_new_js)
+    print("animate")
+    
+    interpolate_list()
+    for joint_state in full_animation:
+                joint_state.header.stamp = rospy.Time.now()
+                
+                print(joint_state)
+                pub.publish(joint_state)
+                #rospy.loginfo("published joint state")
+                rospy.sleep(0.01)
 
 
 def driver():
     exit_entering = False
     while rospy.is_shutdown() == False:
         user_input = input("enter one of the following:\n   0 to finish entering states\n    1 to set a joint state\n    2 to run animation\n    3 to view/edit joint states\n$")
+        
+        
         
         if (user_input == "0"):
             rospy.loginfo("states entered:")
@@ -171,6 +195,7 @@ def interpolate(js1, js2):
 def append_joint_state():
     global current_state, keyframe_jointstates
     rospy.loginfo("joint state saved")
+    rospy.loginfo(current_state)
     keyframe_jointstates.append(current_state)
 
 def init():
@@ -205,6 +230,7 @@ if __name__ == "__main__":
     # code to be executed when the script is run as the main program
     rospy.init_node("animation")
     pub = rospy.Publisher("animation", JointState, queue_size=10)
+    sub = rospy.Subscriber("animate", Bool, animate)
     sub = rospy.Subscriber("/joint_states", JointState, joint_state_callback)
     #sub = rospy.Subscriber("animate_to", JointState, animate_to)
     init()

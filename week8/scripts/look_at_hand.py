@@ -29,11 +29,13 @@ def enable_callback(msg):
 
 def looker():
     global current_joint_state, enable
-    sub = rospy.Subscriber("/look_at_hand/enable", Bool, enable_callback)
-    pub = rospy.Publisher('/animation', JointState, queue_size=10)
+    
     rospy.init_node('looker', anonymous=True)
     
-    sub = rospy.Subscriber("joint_states", JointState, callback)
+    rospy.Subscriber("/look_at_hand/enable", Bool, enable_callback)
+    pub = rospy.Publisher('/animation', JointState, queue_size=10)
+    
+    rospy.Subscriber("joint_states", JointState, callback)
     
     while current_joint_state == None:
         rospy.loginfo("waiting for joint state")
