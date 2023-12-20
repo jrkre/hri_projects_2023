@@ -22,6 +22,7 @@ if __name__ == "__main__":
     sub = rospy.Subscriber("/speech_recognition/final_result", String, result_callback)
     
     outside = False
+    umbrella = False
 
     pub.publish("do you want to go outside?")
     rospy.loginfo("do you want to go outside?")
@@ -39,8 +40,17 @@ if __name__ == "__main__":
             outside = True
         rospy.sleep(1)
     
+    pub.publish("do you have an umbrella?")
+    while response != "yes":
+        if response == "no":
+            umbrella = False
+        if response == "yes":
+            umbrella = True
+        pub.publish("okay")
+
+    if outside and umbrella:
+        pub.publish("you should take an umbrella")
     
-    pub.publish("are you sure?")
     
     while response != "yes":
         rospy.sleep(1)

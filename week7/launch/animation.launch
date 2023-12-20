@@ -1,0 +1,5 @@
+<launch>
+    <rosparam param='source_list'>['animation']</rosparam>
+
+    <node pkg='joint_state_publisher_gui' type='joint_state_publisher_gui' name='my_jsp'></node>
+</launch>
